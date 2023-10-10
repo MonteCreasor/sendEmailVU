@@ -22,6 +22,7 @@ import com.example.sendemailvu.ui.theme.AppTheme
 /**
  * A generic and reusable screen that includes an app bar with title
  * and a custom content area [content] that is application specific.
+ * (Not used in the example).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
