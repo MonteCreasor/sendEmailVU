@@ -146,6 +146,7 @@ fun EmailTextField(
     singleLine: Boolean = false,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
+
     TextField(
         value = value,
         onValueChange = {
