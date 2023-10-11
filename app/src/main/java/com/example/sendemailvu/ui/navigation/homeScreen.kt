@@ -28,6 +28,7 @@ fun NavGraphBuilder.homeScreen(
  * screen and pops all other screens from the back stack.
  * (Not used in the example app)
  */
+@Suppress("unused")
 fun NavController.navigateToHome() {
     navigate(route = homeScreenRoute) {
         popUpTo(0) {
