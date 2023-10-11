@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
+import com.example.sendemailvu.ui.screens.AppBarScreen
 import com.example.sendemailvu.ui.screens.EmailScreen
 import com.example.sendemailvu.ui.theme.AppTheme
 
@@ -22,7 +23,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
-                EmailScreen()
+                AppBarScreen()
             }
         }
     }
@@ -32,6 +33,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainActivityPreview() {
     AppTheme {
-        EmailScreen()
+        AppBarScreen()
     }
 }
