@@ -7,8 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import com.example.sendemailvu.ui.composables.NavAppScreen
-import com.example.sendemailvu.ui.navigation.homeScreenRoute
-import com.example.sendemailvu.ui.screens.EmailScreen
+import com.example.sendemailvu.ui.composables.homeScreenRoute
 import com.example.sendemailvu.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {

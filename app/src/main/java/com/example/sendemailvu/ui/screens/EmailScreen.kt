@@ -13,9 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -72,10 +70,7 @@ fun EmailScreen() {
 
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
+        modifier = Modifier.fillMaxSize()
     ) {
         EmailTextField(
             value = to,
@@ -105,8 +100,9 @@ fun EmailScreen() {
         )
 
         // For a nicer user experience, hide the send button when
-        // the soft keyboard is visible; this will allow the email
-        // body to expand to fill all the available space.
+        // the soft keyboard is visible; this allows the email body
+        // to expand to fill all available vertical space above
+        // the soft keyboard.
         if (!isKeyboardVisible) {
             Button(
                 onClick = {

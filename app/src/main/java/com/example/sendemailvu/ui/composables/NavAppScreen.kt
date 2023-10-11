@@ -15,11 +15,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.sendemailvu.ui.navigation.AppNavigator
-import com.example.sendemailvu.ui.navigation.homeScreenRoute
+import com.example.sendemailvu.ui.screens.EmailScreen
+import com.example.sendemailvu.ui.screens.HomeScreen
 import com.example.sendemailvu.ui.theme.AppTheme
+
+/**
+ * Screen route names that are also used as the screen title
+ * displayed in the AppBar.
+ */
+const val emailScreenRoute = "New Message"
+const val homeScreenRoute = "Send Email Example"
 
 /**
  * A generic reusable screen that includes an app bar with title
@@ -34,7 +43,7 @@ fun NavAppScreen(
     startDestination: String
 ) {
     val backStackEntry: NavBackStackEntry? by navController.currentBackStackEntryAsState()
-    val currentRoute = currentRoute(backStackEntry = backStackEntry) ?: startDestination
+    val currentRoute = backStackEntry?.destination?.route ?: startDestination
 
     Scaffold(
         topBar = {
@@ -45,19 +54,27 @@ fun NavAppScreen(
             )
         },
     ) { paddingValues ->
-        AppNavigator(
+        NavHost(
+            navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(paddingValues),
-            navController = navController
-        )
-    }
-}
+            modifier = Modifier.padding(paddingValues)
+        ) {
+            // Home Screen route (start destination) that uses the
+            // passed lambda to navigate to the compose email screen.
+            composable(homeScreenRoute) {
+                HomeScreen(sendButtonClicked = {
+                    navController.navigate(route = emailScreenRoute)
+                })
+            }
 
-/**
- * Strips optional query parameters from the route.
- */
-fun currentRoute(backStackEntry: NavBackStackEntry?): String? {
-    return backStackEntry?.destination?.route?.substringBefore("?")
+            // Compose Email Screen route is the final destination
+            // and only supports back navigation which is automatically
+            // handled by the parent NavAppScreen composable.
+            composable(emailScreenRoute) {
+                EmailScreen()
+            }
+        }
+    }
 }
 
 /**
