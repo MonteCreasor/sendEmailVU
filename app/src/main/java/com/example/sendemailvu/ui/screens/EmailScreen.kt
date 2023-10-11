@@ -1,5 +1,6 @@
 package com.example.sendemailvu.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ fun EmailScreen() {
     var subject by rememberSaveable { mutableStateOf("") }
     var message by rememberSaveable { mutableStateOf("") }
 
+    // A remembered state to keep track of whether the entered is valid.
     val isValidEmail by rememberUpdatedState(newValue = isValidEmail(to))
 
     // We need to know if the keyboard is visible so that we can adjust
@@ -113,64 +115,12 @@ fun EmailScreen() {
         // soft keyboard.
         if (!isKeyboardVisible) {
             SendButton(
-                onClick = {
-                    // Create an Intent object to perform a send action.
-                    val intent = Intent(Intent.ACTION_SEND).apply {
-                        // Directly name the standard Gmail package as the
-                        // target of this request so that an app chooser is
-                        // not required.
-                        setPackage("com.google.android.gm")
-
-                        // We are sending plain text Intent extras.
-                        type = "plain/text"
-
-                        // Insert the email addresses, subject, and body
-                        // as Intent's extras. Email addresses must be
-                        // separated by commas.
-                        putExtra(
-                            Intent.EXTRA_EMAIL,
-                            to.split(",")
-                                .map { it.trim() }
-                                .toTypedArray()
-                        )
-                        putExtra(Intent.EXTRA_SUBJECT, subject)
-                        putExtra(Intent.EXTRA_TEXT, message)
-                    }
-
-                    // Ensure that the declared gmail package can be
-                    // resolved (found on the device) and if found,
-                    // then start send the intent to start the Compose
-                    // activity that will populate its fields with the
-                    // with the Intent extras.
-                    if (intent.resolveActivity(context.packageManager) != null) {
-                        context.startActivity(intent)
-                    } else {
-                        Toast.makeText(
-                            context,
-                            "GMail client not found.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                },
+                onClick = { sendEmail(context, to, subject, message) },
                 modifier = Modifier.padding(16.dp),
                 enabled = isValidEmail
             )
         }
     }
-}
-
-/**
- * Helper to ensure that passed [addresses] string contains
- * a comma separated list of valid email addresses.
- */
-internal fun isValidEmail(addresses: String): Boolean {
-    // A regular expression to ensure that the gmail address is valid.
-    val emailRegex = """[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}""".toRegex()
-
-    return addresses.split(",")
-        .map { it.trim() }
-        .filterNot { it.matches(emailRegex) }
-        .isEmpty()
 }
 
 /**
@@ -256,6 +206,60 @@ fun SendButton(
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
         }
+    }
+}
+
+/**
+ * Helper to ensure that passed [addresses] string contains
+ * a comma separated list of valid email addresses.
+ */
+internal fun isValidEmail(addresses: String): Boolean {
+    // A regular expression to ensure that the gmail address is valid.
+    val emailRegex = """[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}""".toRegex()
+
+    return addresses.split(",")
+        .map { it.trim() }
+        .filterNot { it.matches(emailRegex) }
+        .isEmpty()
+}
+
+fun sendEmail(context: Context, to: String, subject: String, message: String) {
+    // Create an Intent object to perform a send action.
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        // Directly name the standard Gmail package as the
+        // target of this request so that an app chooser is
+        // not required.
+        setPackage("com.google.android.gm")
+
+        // We are sending plain text Intent extras.
+        type = "plain/text"
+
+        // Insert the email addresses, subject, and body
+        // as Intent's extras. Email addresses must be
+        // separated by commas.
+        putExtra(
+            Intent.EXTRA_EMAIL,
+            to.split(",")
+                .map { it.trim() }
+                .toTypedArray()
+        )
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, message)
+    }
+
+    // Ensure that the declared gmail package can be
+    // resolved (found on the device) and if found,
+    // then start send the intent to start the Compose
+    // activity that will populate its fields with the
+    // with the Intent extras.
+    if (intent.resolveActivity(context.packageManager) != null) {
+        context.startActivity(intent)
+    } else {
+        Toast.makeText(
+            context,
+            "GMail client not found.",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
 
