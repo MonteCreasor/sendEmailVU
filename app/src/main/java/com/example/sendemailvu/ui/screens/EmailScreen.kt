@@ -6,9 +6,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -33,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -58,9 +61,7 @@ fun EmailScreen() {
     // Create a launcher for sending emails
     val sendEmailLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
-    ) { _ ->
-        // Handle the result if needed (not required in this example)
-    }
+    ) { _ -> }
 
     // Used a launch effect to set focus to the To field when
     // the screen is first displayed.
@@ -68,12 +69,12 @@ fun EmailScreen() {
         focusRequester.requestFocus()
     }
 
-
     Column(
         modifier = Modifier.fillMaxSize()
+//            .statusBarsPadding()
+//            .navigationBarsPadding()
     ) {
-        EmailTextField(
-            value = to,
+        EmailTextField(value = to,
             onValueChange = {
                 to = it
             },
@@ -81,8 +82,7 @@ fun EmailScreen() {
             isValid = { it.matches(emailRegex) },
             supportingText = "Invalid email address",
             singleLine = true,
-            prefix = { Text(text = "To:") }
-        )
+            prefix = { Text(text = "To:") })
 
         EmailTextField(
             value = subject,
@@ -95,16 +95,26 @@ fun EmailScreen() {
             value = message,
             onValueChange = { message = it },
             modifier = Modifier
-                .weight(1f)
+                .composed {
+                    if (isKeyboardVisible) {
+                        // Bottom of body TextField is 24.dp too high when keyboard is
+                        // visible, so consume 24.dp so that TextField bottom touches
+                        // the top of the keyboard.
+                        Modifier.consumeWindowInsets(PaddingValues(bottom = 24.dp))
+                    } else {
+                        Modifier
+                    }
+                }
                 .imePadding()
+                .weight(1f)
         )
 
-        // For a nicer user experience, hide the send button when
-        // the soft keyboard is visible; this allows the email body
-        // to expand to fill all available vertical space above
-        // the soft keyboard.
+        // For a nicer user experience, don't show the send button
+        // when the soft keyboard is visible. This allows the email
+        // body TextField to use the entire screen aread above the
+        // soft keyboard.
         if (!isKeyboardVisible) {
-            Button(
+            SendButton(
                 onClick = {
                     // Create an Intent object to perform a send action.
                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
@@ -129,20 +139,7 @@ fun EmailScreen() {
                 },
                 modifier = Modifier.padding(16.dp),
                 enabled = isValidEmail
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(text = "Send")
-                    Spacer(modifier = Modifier.padding(horizontal = 8.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Default.Send,
-                        contentDescription = "Send Email",
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                }
-            }
+            )
         }
     }
 }
@@ -191,9 +188,7 @@ fun EmailTextField(
             focusedIndicatorColor = Color.LightGray,
             unfocusedIndicatorColor = Color.LightGray,
         ),
-        keyboardActions = KeyboardActions(
-            onDone = { keyboardController?.hide() }
-        ),
+        keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
         keyboardOptions = KeyboardOptions.Default.copy(
             imeAction = if (singleLine) ImeAction.Done else ImeAction.Default
         ),
@@ -205,6 +200,28 @@ fun EmailTextField(
         },
         isError = isError,
     )
+}
+
+@Composable
+fun SendButton(
+    onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true
+) {
+    Button(
+        onClick = onClick, modifier = modifier, enabled = enabled
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "Send")
+            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Default.Send,
+                contentDescription = "Send Email",
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+        }
+    }
 }
 
 @Preview(showBackground = true)
