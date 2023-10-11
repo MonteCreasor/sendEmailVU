@@ -180,7 +180,8 @@ internal fun isValidEmail(addresses: String): Boolean {
 
 /**
  * A custom TextField that is used to hide some of the
- * complexity required to support each email TextField.
+ * complexity required to support error indicators for
+ * TextFields.
  */
 @Composable
 fun EmailTextField(
