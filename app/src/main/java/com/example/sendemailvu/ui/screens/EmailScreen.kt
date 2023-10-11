@@ -111,7 +111,7 @@ fun EmailScreen() {
 
         // For a nicer user experience, don't show the send button
         // when the soft keyboard is visible. This allows the email
-        // body TextField to use the entire screen aread above the
+        // body TextField to use the entire screen area above the
         // soft keyboard.
         if (!isKeyboardVisible) {
             SendButton(
@@ -202,9 +202,14 @@ fun EmailTextField(
     )
 }
 
+/**
+ * A custom send Button that shows both text and an icon.
+ */
 @Composable
 fun SendButton(
-    onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick, modifier = modifier, enabled = enabled
