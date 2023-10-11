@@ -8,6 +8,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import com.example.sendemailvu.ui.composables.NavAppScreen
 import com.example.sendemailvu.ui.navigation.homeScreenRoute
+import com.example.sendemailvu.ui.screens.EmailScreen
 import com.example.sendemailvu.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
@@ -15,14 +16,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // This call is required in order to use Modifier.imePadding()
-        // in ComposeEmailScreen so that when the user is typing text
-        // in the body TextField, the content is automatically shifted
-        // up so that it will not be obscured by the soft keyboard.
+        // in ComposeEmailScreen. Together they ensure that when
+        // the user is typing text in the email body, the content
+        // is automatically shifted up so that it will not be obscured
+        // by the soft keyboard.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
             AppTheme {
-                NavAppScreen(startDestination = homeScreenRoute)
+                EmailScreen()
+//                NavAppScreen(startDestination = homeScreenRoute)
             }
         }
     }

@@ -26,13 +26,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
@@ -40,19 +45,29 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.sendemailvu.ui.theme.AppTheme
 
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ComposeEmailScreen() {
+fun EmailScreen() {
+    val emailRegex = "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}".toRegex()
     var to by rememberSaveable { mutableStateOf("") }
     var subject by rememberSaveable { mutableStateOf("") }
     var message by rememberSaveable { mutableStateOf("") }
     val isKeyboardVisible by rememberUpdatedState(newValue = WindowInsets.isImeVisible)
+    val isValidEmail by rememberUpdatedState(newValue = to.matches(emailRegex))
+    val focusRequester = remember { FocusRequester() }
 
     // Create a launcher for sending emails
     val sendEmailLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { _ ->
         // Handle the result if needed (not required in this example)
+    }
+
+    // Used a launch effect to set focus to the To field when
+    // the screen is first displayed.
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 
 
@@ -64,7 +79,12 @@ fun ComposeEmailScreen() {
     ) {
         EmailTextField(
             value = to,
-            onValueChange = { to = it },
+            onValueChange = {
+                to = it
+            },
+            modifier = Modifier.focusRequester(focusRequester),
+            isValid = { it.matches(emailRegex) },
+            supportingText = "Invalid email address",
             singleLine = true,
             prefix = { Text(text = "To:") }
         )
@@ -111,8 +131,8 @@ fun ComposeEmailScreen() {
                         Intent.createChooser(sendIntent, "Send Email")
                     )
                 },
-                modifier = Modifier
-                    .padding(16.dp)
+                modifier = Modifier.padding(16.dp),
+                enabled = isValidEmail
             ) {
                 Row(
                     horizontalArrangement = Arrangement.Start,
@@ -142,17 +162,30 @@ fun EmailTextField(
     label: @Composable (() -> Unit)? = null,
     placeholder: @Composable (() -> Unit)? = null,
     prefix: @Composable (() -> Unit)? = null,
+    supportingText: String? = null,
     onValueChange: (String) -> Unit,
+    isValid: (String) -> Boolean = { true },
     singleLine: Boolean = false,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
+    var showSupportingText by remember { mutableStateOf(false) }
+    var isFocused by remember { mutableStateOf(false) }
+
+    // Show error indicator when field value is invalid and
+    // user is not actively editing the field to fix the issue.
+    val isError by rememberUpdatedState(newValue = !isValid(value) && !isFocused)
 
     TextField(
         value = value,
         onValueChange = {
             onValueChange(it)
         },
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .onFocusChanged {
+                isFocused = it.isFocused
+                showSupportingText = !isFocused && !isValid(value)
+            },
         label = label,
         placeholder = placeholder,
         singleLine = singleLine,
@@ -168,7 +201,13 @@ fun EmailTextField(
         keyboardOptions = KeyboardOptions.Default.copy(
             imeAction = if (singleLine) ImeAction.Done else ImeAction.Default
         ),
-        prefix = prefix
+        prefix = prefix,
+        supportingText = if (!isValid(value) && showSupportingText) {
+            { Text(text = supportingText ?: "Invalid") }
+        } else {
+            null
+        },
+        isError = isError,
     )
 }
 
@@ -176,6 +215,6 @@ fun EmailTextField(
 @Composable
 fun NewMessagePreview() {
     AppTheme {
-        ComposeEmailScreen()
+        EmailScreen()
     }
 }

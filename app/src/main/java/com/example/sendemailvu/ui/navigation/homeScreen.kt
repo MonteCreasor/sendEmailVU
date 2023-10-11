@@ -19,7 +19,7 @@ fun NavGraphBuilder.homeScreen(
     onNavigateToNewMessageScreen: () -> Unit
 ) {
     composable(homeScreenRoute) {
-        HomeScreen(composeEmailClicked = onNavigateToNewMessageScreen)
+        HomeScreen(sendClicked = onNavigateToNewMessageScreen)
     }
 }
 

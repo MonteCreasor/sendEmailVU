@@ -17,7 +17,7 @@ import com.example.sendemailvu.R
 import com.example.sendemailvu.ui.theme.AppTheme
 
 @Composable
-fun HomeScreen(composeEmailClicked: () -> Unit = {}) {
+fun HomeScreen(sendClicked: () -> Unit = {}) {
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -37,7 +37,7 @@ fun HomeScreen(composeEmailClicked: () -> Unit = {}) {
             contentDescription = "Vanderbilt Logos"
         )
         Button(
-            onClick = composeEmailClicked,
+            onClick = sendClicked,
             modifier = Modifier
                 .padding(16.dp)
                 .align(alignment = Alignment.BottomCenter)
