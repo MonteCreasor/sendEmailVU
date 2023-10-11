@@ -66,6 +66,10 @@ dependencies {
     implementation(libs.material.icons.extended)
     implementation(libs.navigation.compose)
     implementation(libs.navigation.runtime.ktx)
+
+//    implementation(libs.google.api.client)
+//    implementation(libs.google.api.services.gmail)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
