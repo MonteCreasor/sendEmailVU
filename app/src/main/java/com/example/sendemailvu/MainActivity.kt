@@ -6,8 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
-import com.example.sendemailvu.ui.composables.NavAppScreen
-import com.example.sendemailvu.ui.composables.homeScreenRoute
+import com.example.sendemailvu.ui.screens.EmailScreen
 import com.example.sendemailvu.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
@@ -23,7 +22,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
-                NavAppScreen(startDestination = homeScreenRoute)
+                EmailScreen()
             }
         }
     }
@@ -33,6 +32,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainActivityPreview() {
     AppTheme {
-        NavAppScreen(startDestination = homeScreenRoute)
+        EmailScreen()
     }
 }

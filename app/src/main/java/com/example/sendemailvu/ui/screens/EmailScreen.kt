@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -71,8 +73,8 @@ fun EmailScreen() {
 
     Column(
         modifier = Modifier.fillMaxSize()
-//            .statusBarsPadding()
-//            .navigationBarsPadding()
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
         EmailTextField(value = to,
             onValueChange = {
@@ -95,16 +97,6 @@ fun EmailScreen() {
             value = message,
             onValueChange = { message = it },
             modifier = Modifier
-                .composed {
-                    if (isKeyboardVisible) {
-                        // Bottom of body TextField is 24.dp too high when keyboard is
-                        // visible, so consume 24.dp so that TextField bottom touches
-                        // the top of the keyboard.
-                        Modifier.consumeWindowInsets(PaddingValues(bottom = 24.dp))
-                    } else {
-                        Modifier
-                    }
-                }
                 .imePadding()
                 .weight(1f)
         )
