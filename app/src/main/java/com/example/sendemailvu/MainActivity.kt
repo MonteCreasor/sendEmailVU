@@ -24,8 +24,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
-                EmailScreen()
-//                NavAppScreen(startDestination = homeScreenRoute)
+                NavAppScreen(startDestination = homeScreenRoute)
             }
         }
     }
