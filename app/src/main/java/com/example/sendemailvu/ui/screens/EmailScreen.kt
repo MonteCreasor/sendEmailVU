@@ -223,6 +223,9 @@ internal fun isValidEmail(addresses: String): Boolean {
         .isEmpty()
 }
 
+/**
+ * Helper to send an email using the Gmail app.
+ */
 fun sendEmail(context: Context, to: String, subject: String, message: String) {
     // Create an Intent object to perform a send action.
     val intent = Intent(Intent.ACTION_SEND).apply {
