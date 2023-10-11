@@ -72,10 +72,7 @@ fun EmailScreen() {
 
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
+        modifier = Modifier.fillMaxSize()
     ) {
         EmailTextField(
             value = to,
