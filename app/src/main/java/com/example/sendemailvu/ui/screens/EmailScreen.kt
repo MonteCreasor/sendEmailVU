@@ -1,16 +1,13 @@
 package com.example.sendemailvu.ui.screens
 
 import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -37,33 +34,39 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.sendemailvu.ui.theme.AppTheme
 
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EmailScreen() {
-    val emailRegex = "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}".toRegex()
+    // User rememberSaveable for all text fields so that their
+    // contents survive configuration changes (e.g. rotations).
     var to by rememberSaveable { mutableStateOf("") }
     var subject by rememberSaveable { mutableStateOf("") }
     var message by rememberSaveable { mutableStateOf("") }
+
+    val isValidEmail by rememberUpdatedState(newValue = isValidEmail(to))
+
+    // We need to know if the keyboard is visible so that we can adjust
+    // the email body text field to always display above the keyboard
+    // and never beneath it.
     val isKeyboardVisible by rememberUpdatedState(newValue = WindowInsets.isImeVisible)
-    val isValidEmail by rememberUpdatedState(newValue = to.matches(emailRegex))
+
+    // A focus request is used to ensure that the focus is on the To
+    // text field when the screen is first displayed.
     val focusRequester = remember { FocusRequester() }
 
-    // Create a launcher for sending emails
-    val sendEmailLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { _ -> }
+    // A context is needed for the send button click handler to call startActivity.
+    val context = LocalContext.current
 
     // Used a launch effect to set focus to the To field when
     // the screen is first displayed.
@@ -72,20 +75,27 @@ fun EmailScreen() {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
+        // The To text field is a single line and supports multiple
+        // emails that must be comma separated. This field also
+        // does a validation check to ensure that any entered values
+        // are valid email addresses.
         EmailTextField(value = to,
             onValueChange = {
                 to = it
             },
+            // Sets initial focus to the this field.
             modifier = Modifier.focusRequester(focusRequester),
-            isValid = { it.matches(emailRegex) },
+            isValid = isValidEmail,
             supportingText = "Invalid email address",
             singleLine = true,
             prefix = { Text(text = "To:") })
 
+        // The Subject text field is a single line and is not required.
         EmailTextField(
             value = subject,
             onValueChange = { subject = it },
@@ -93,6 +103,7 @@ fun EmailScreen() {
             placeholder = { Text(text = "Subject") },
         )
 
+        // The Body text field is multiline and is not required.
         EmailTextField(
             value = message,
             onValueChange = { message = it },
@@ -109,31 +120,62 @@ fun EmailScreen() {
             SendButton(
                 onClick = {
                     // Create an Intent object to perform a send action.
-                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                        // We are sending the text contents of each
-                        // TextField, so set "plain/text" MIME type.
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        // Directly name the standard Gmail package as the
+                        // target of this request so that an app chooser is
+                        // not required.
+                        setPackage("com.google.android.gm")
+
+                        // We are sending plain text Intent extras.
                         type = "plain/text"
 
-                        // Insert the email addresses, subject and body
-                        // as Intent's extras (only 1 email address is
-                        // currently supported).
-                        putExtra(Intent.EXTRA_EMAIL, arrayOf(to))
+                        // Insert the email addresses, subject, and body
+                        // as Intent's extras. Email addresses must be
+                        // separated by commas.
+                        putExtra(
+                            Intent.EXTRA_EMAIL,
+                            to.split(",")
+                                .map { it.trim() }
+                                .toTypedArray()
+                        )
                         putExtra(Intent.EXTRA_SUBJECT, subject)
                         putExtra(Intent.EXTRA_TEXT, message)
                     }
 
-                    // Launch the Intent using the previously created launcher.
-                    // The createChooser method allows the user to select from
-                    // multiple email client options if available.
-                    sendEmailLauncher.launch(
-                        Intent.createChooser(sendIntent, "Send Email")
-                    )
+                    // Ensure that the declared gmail package can be
+                    // resolved (found on the device) and if found,
+                    // then start send the intent to start the Compose
+                    // activity that will populate its fields with the
+                    // with the Intent extras.
+                    if (intent.resolveActivity(context.packageManager) != null) {
+                        context.startActivity(intent)
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "GMail client not found.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 },
                 modifier = Modifier.padding(16.dp),
                 enabled = isValidEmail
             )
         }
     }
+}
+
+/**
+ * Helper to ensure that passed [addresses] string contains
+ * a comma separated list of valid email addresses.
+ */
+internal fun isValidEmail(addresses: String): Boolean {
+    // A regular expression to ensure that the gmail address is valid.
+    val emailRegex = """[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}""".toRegex()
+
+    return addresses.split(",")
+        .map { it.trim() }
+        .filterNot { it.matches(emailRegex) }
+        .isEmpty()
 }
 
 /**
@@ -149,8 +191,8 @@ fun EmailTextField(
     prefix: @Composable (() -> Unit)? = null,
     supportingText: String? = null,
     onValueChange: (String) -> Unit,
-    isValid: (String) -> Boolean = { true },
     singleLine: Boolean = false,
+    isValid: Boolean = true,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     var showSupportingText by remember { mutableStateOf(false) }
@@ -158,7 +200,7 @@ fun EmailTextField(
 
     // Show error indicator when field value is invalid and
     // user is not actively editing the field to fix the issue.
-    val isError by rememberUpdatedState(newValue = !isValid(value) && !isFocused)
+    val isError by rememberUpdatedState(newValue = !isValid && !isFocused)
 
     TextField(
         value = value,
@@ -169,7 +211,7 @@ fun EmailTextField(
             .fillMaxWidth()
             .onFocusChanged {
                 isFocused = it.isFocused
-                showSupportingText = !isFocused && !isValid(value)
+                showSupportingText = !isFocused && !isValid
             },
         label = label,
         placeholder = placeholder,
@@ -185,7 +227,7 @@ fun EmailTextField(
             imeAction = if (singleLine) ImeAction.Done else ImeAction.Default
         ),
         prefix = prefix,
-        supportingText = if (!isValid(value) && showSupportingText) {
+        supportingText = if (!isValid && showSupportingText) {
             { Text(text = supportingText ?: "Invalid") }
         } else {
             null
