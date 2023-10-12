@@ -28,6 +28,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,12 +49,6 @@ import androidx.compose.ui.unit.dp
 import com.example.sendemailvu.R
 import com.example.sendemailvu.ui.theme.AppTheme
 
-data class EmailContent(
-    val to: String,
-    val subject: String?,
-    val message: String?,
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppBarScreen(
@@ -62,9 +57,9 @@ fun AppBarScreen(
 ) {
     // User rememberSaveable for all text fields so that their
     // contents survive configuration changes (e.g. rotations).
-    var to by rememberSaveable { mutableStateOf("") }
-    var subject by rememberSaveable { mutableStateOf<String?>(null) }
-    var message by rememberSaveable { mutableStateOf<String?>(null) }
+    val to = rememberSaveable { mutableStateOf("") }
+    val subject = rememberSaveable { mutableStateOf("") }
+    val message = rememberSaveable { mutableStateOf("") }
 
     // A context is needed for starting the GMail activity.
     val context = LocalContext.current
@@ -95,9 +90,9 @@ fun AppBarScreen(
                     IconButton(
                         onClick = {
                             sendEmail(
-                                context, to = to,
-                                subject = subject,
-                                message = message
+                                context, to = to.value,
+                                subject = subject.value,
+                                message = message.value
                             )
                         }
                     ) {
@@ -116,28 +111,23 @@ fun AppBarScreen(
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
-            EmailScreen {
-                to = it.to
-                subject = it.subject
-                message = it.message
-            }
+            EmailScreen(
+                to = to,
+                subject = subject,
+                message = message
+            )
         }
     }
 }
 
 @Composable
 fun EmailScreen(
-    onEmailContentChange: (EmailContent) -> Unit
+    to: MutableState<String>,
+    subject: MutableState<String>,
+    message: MutableState<String>
 ) {
-    // User rememberSaveable for all text fields so that their
-    // contents survive configuration changes (e.g. rotations).
-    var to by rememberSaveable { mutableStateOf("") }
-    var subject by rememberSaveable { mutableStateOf("") }
-    var message by rememberSaveable { mutableStateOf("") }
-    val emailContent by rememberUpdatedState(newValue = EmailContent(to, subject, message))
-
     // A remembered state to keep track of whether the entered is valid.
-    val isValidEmail by rememberUpdatedState(newValue = isValidEmail(to))
+    val isValidEmail by rememberUpdatedState(newValue = isValidEmail(to.value))
 
     // A focus request is used to ensure that the focus is on the To
     // text field when the screen is first displayed.
@@ -156,10 +146,10 @@ fun EmailScreen(
         // emails that must be comma separated. This field also
         // does a validation check to ensure that any entered values
         // are valid email addresses.
-        EmailTextField(value = to,
+        EmailTextField(
+            value = to.value,
             onValueChange = {
-                to = it
-                onEmailContentChange(emailContent.copy(to = it))
+                to.value = it
             },
             // Sets initial focus to the this field.
             modifier = Modifier.focusRequester(focusRequester),
@@ -176,10 +166,9 @@ fun EmailScreen(
 
         // The Subject text field is a single line and is not required.
         EmailTextField(
-            value = subject,
+            value = subject.value,
             onValueChange = {
-                subject = it
-                onEmailContentChange(emailContent.copy(subject = it))
+                subject.value = it
             },
             singleLine = true,
             placeholder = { Text(text = "Subject") },
@@ -187,10 +176,9 @@ fun EmailScreen(
 
         // The Body text field is multiline and is not required.
         EmailTextField(
-            value = message,
+            value = message.value,
             onValueChange = {
-                message = it
-                onEmailContentChange(emailContent.copy(message = it))
+                message.value = it
             },
             modifier = Modifier
                 .weight(1f)
@@ -317,7 +305,10 @@ fun sendEmail(context: Context, to: String, subject: String?, message: String?) 
 @Preview(showBackground = true)
 @Composable
 fun NewMessagePreview() {
+    val to = rememberSaveable { mutableStateOf("test@gmail.com") }
+    val subject = rememberSaveable { mutableStateOf("Welcome!") }
+    val message = rememberSaveable { mutableStateOf("This is a GMail example app") }
     AppTheme {
-        EmailScreen(onEmailContentChange = {})
+        EmailScreen(to, subject, message)
     }
 }
