@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         // the user is typing text in the email body, the content
         // is automatically shifted up so that it will not be obscured
         // by the soft keyboard.
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+//        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
             AppTheme {
