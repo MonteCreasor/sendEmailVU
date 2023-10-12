@@ -2,7 +2,11 @@ package com.example.sendemailvu.ui.screens
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +59,14 @@ fun AppBarScreen(
     titleId: Int = R.string.app_name,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
+    // The screen app bar title.
+    val title = stringResource(id = titleId)
+
+    // Support scrolling if needed.
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(
+        rememberTopAppBarState()
+    )
+
     // User rememberSaveable for all text fields so that their
     // contents survive configuration changes (e.g. rotations).
     val to = rememberSaveable { mutableStateOf("") }
@@ -64,11 +76,15 @@ fun AppBarScreen(
     // A context is needed for starting the GMail activity.
     val context = LocalContext.current
 
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(
-        rememberTopAppBarState()
-    )
+    // A uri if the user decides to attach a file.
+    val attachmentUri = rememberSaveable { mutableStateOf<Uri?>(null) }
 
-    val title = stringResource(id = titleId)
+    // Initialize the activity result launcher that will be used
+    // to launch the file picker activity.
+    val filePickerLauncher: ManagedActivityResultLauncher<Array<String>, Uri?> =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            attachmentUri.value = uri
+        }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -78,9 +94,7 @@ fun AppBarScreen(
                 scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(
-                        onClick = {
-                            /* TODO */
-                        }
+                        onClick = { filePickerLauncher.launch(arrayOf("*/*")) }
                     ) {
                         Icon(
                             imageVector = Icons.Default.AttachFile,
@@ -92,7 +106,8 @@ fun AppBarScreen(
                             sendEmail(
                                 context, to = to.value,
                                 subject = subject.value,
-                                message = message.value
+                                message = message.value,
+                                attachment = attachmentUri.value
                             )
                         }
                     ) {
@@ -262,7 +277,13 @@ internal fun isValidEmail(addresses: String): Boolean {
 /**
  * Helper to send an email using the Gmail app.
  */
-fun sendEmail(context: Context, to: String, subject: String?, message: String?) {
+fun sendEmail(
+    context: Context,
+    to: String,
+    subject: String,
+    message: String,
+    attachment: Uri?
+) {
     // Create an Intent object to perform a send action.
     val intent = Intent(Intent.ACTION_SEND).apply {
         // Directly name the standard Gmail package as the
@@ -282,8 +303,18 @@ fun sendEmail(context: Context, to: String, subject: String?, message: String?) 
                 .map { it.trim() }
                 .toTypedArray()
         )
-        subject?.let { putExtra(Intent.EXTRA_SUBJECT, subject) }
-        message?.let { putExtra(Intent.EXTRA_TEXT, message) }
+
+        if (subject.isNotEmpty()) {
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+        }
+
+        if (message.isNotEmpty()) {
+            putExtra(Intent.EXTRA_TEXT, message)
+        }
+
+        if (attachment != null) {
+            putExtra(Intent.EXTRA_STREAM, attachment)
+        }
     }
 
     // Ensure that the declared gmail package can be
