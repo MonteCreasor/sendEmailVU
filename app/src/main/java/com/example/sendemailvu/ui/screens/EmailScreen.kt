@@ -2,30 +2,48 @@ package com.example.sendemailvu.ui.screens
 
 import android.content.Context
 import android.content.Intent
-import android.widget.Toast
+import android.content.res.Configuration.UI_MODE_NIGHT_NO
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -33,40 +51,122 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.sendemailvu.R
 import com.example.sendemailvu.ui.theme.AppTheme
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EmailScreen() {
+fun EmailScreen(
+    titleId: Int = R.string.app_name
+) {
+    // The screen app bar title.
+    val title = stringResource(id = titleId)
+
+    // Support scrolling if needed.
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(
+        rememberTopAppBarState()
+    )
+
+    // A context is needed for starting the GMail activity.
+    val context = LocalContext.current
+
     // User rememberSaveable for all text fields so that their
     // contents survive configuration changes (e.g. rotations).
-    var to by rememberSaveable { mutableStateOf("") }
-    var subject by rememberSaveable { mutableStateOf("") }
-    var message by rememberSaveable { mutableStateOf("") }
+    val to = rememberSaveable { mutableStateOf("") }
+    val subject = rememberSaveable { mutableStateOf("") }
+    val message = rememberSaveable { mutableStateOf("") }
+    val attachments = remember { mutableStateListOf<Uri>() }
 
+    // Initialize the activity result launcher that will be used
+    // to launch the file picker activity.
+    val filePickerLauncher: ManagedActivityResultLauncher<Array<String>, Uri?> =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            if (uri != null) {
+                attachments.add(uri)
+            }
+        }
+
+    // This Scaffold is used to provide a top app bar with attach and send action buttons.
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                title = { Text(text = title) },
+                scrollBehavior = scrollBehavior,
+                actions = {
+                    // Attach action starts a file picker.
+                    IconButton(
+                        onClick = { filePickerLauncher.launch(arrayOf("*/*")) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AttachFile,
+                            contentDescription = "Attach File",
+                            modifier = Modifier.rotate(90f),
+                        )
+                    }
+
+                    // Send action calls the sendEmail helper function
+                    // to send email contents and possible attachments.
+                    IconButton(
+                        onClick = {
+                            sendEmail(
+                                context, to = to.value,
+                                subject = subject.value,
+                                message = message.value,
+                                attachments = attachments
+                            )
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Send,
+                            contentDescription = "Send Email",
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier.padding(paddingValues)
+        ) {
+            EmailContent(
+                to = to,
+                subject = subject,
+                message = message,
+                attachments = attachments,
+                modifier = Modifier,
+            )
+        }
+    }
+}
+
+@Composable
+fun EmailContent(
+    to: MutableState<String>,
+    subject: MutableState<String>,
+    message: MutableState<String>,
+    attachments: MutableList<Uri>,
+    modifier: Modifier
+) {
     // A remembered state to keep track of whether the entered is valid.
-    val isValidEmail by rememberUpdatedState(newValue = isValidEmail(to))
-
-    // We need to know if the keyboard is visible so that we can adjust
-    // the email body text field to always display above the keyboard
-    // and never beneath it.
-    val isKeyboardVisible by rememberUpdatedState(newValue = WindowInsets.isImeVisible)
+    val isValidEmail by rememberUpdatedState(newValue = isValidEmail(to.value))
 
     // A focus request is used to ensure that the focus is on the To
     // text field when the screen is first displayed.
     val focusRequester = remember { FocusRequester() }
-
-    // A context is needed for the send button click handler to call startActivity.
-    val context = LocalContext.current
 
     // Used a launch effect to set focus to the To field when
     // the screen is first displayed.
@@ -74,50 +174,72 @@ fun EmailScreen() {
         focusRequester.requestFocus()
     }
 
+    // Support scrolling if needed.
+    val scrollState = rememberScrollState()
+
+    var bodyHasFocus by remember { mutableStateOf(false) }
+
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(scrollState)
     ) {
+
         // The To text field is a single line and supports multiple
         // emails that must be comma separated. This field also
         // does a validation check to ensure that any entered values
         // are valid email addresses.
-        EmailTextField(value = to,
+        EmailTextField(
+            value = to.value,
             onValueChange = {
-                to = it
+                to.value = it
             },
             // Sets initial focus to the this field.
             modifier = Modifier.focusRequester(focusRequester),
             isValid = isValidEmail,
             supportingText = "Invalid email address",
             singleLine = true,
-            prefix = { Text(text = "To:") })
+            prefix = {
+                Text(
+                    text = "To",
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+        )
 
-        // The Subject text field is a single line and is not required.
         EmailTextField(
-            value = subject,
-            onValueChange = { subject = it },
+            value = subject.value,
+            onValueChange = {
+                subject.value = it
+            },
             singleLine = true,
             placeholder = { Text(text = "Subject") },
         )
 
-        // The Body text field is multiline and is not required.
         EmailTextField(
-            value = message,
-            onValueChange = { message = it },
+            value = message.value,
+            onValueChange = {
+                message.value = it
+            },
             modifier = Modifier
                 .imePadding()
-                .weight(1f)
+                .fillMaxWidth()
+                .onFocusChanged {
+                    bodyHasFocus = it.isFocused
+                },
+            hideUnderline = true,
         )
 
-        // For a nicer user experience, don't show the send button
-        // when the soft keyboard is visible. This allows the email
-        // body TextField to use the entire screen area above the
-        // soft keyboard.
-        if (!isKeyboardVisible) {
-            SendButton(
-                onClick = { sendEmail(context, to, subject, message) },
-                modifier = Modifier.padding(16.dp),
-                enabled = isValidEmail
+        // Display attachments optional attachments.
+        if (attachments.isNotEmpty()) {
+            Attachments(
+                attachments = attachments,
+                onCloseClicked = {
+                    attachments.removeAt(it)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
             )
         }
     }
@@ -138,6 +260,7 @@ fun EmailTextField(
     supportingText: String? = null,
     onValueChange: (String) -> Unit,
     singleLine: Boolean = false,
+    hideUnderline: Boolean = false,
     isValid: Boolean = true,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -147,6 +270,12 @@ fun EmailTextField(
     // Show error indicator when field value is invalid and
     // user is not actively editing the field to fix the issue.
     val isError by rememberUpdatedState(newValue = !isValid && !isFocused)
+
+    val indicatorColor = if (hideUnderline) {
+        Color.Transparent
+    } else {
+        MaterialTheme.colorScheme.outlineVariant
+    }
 
     TextField(
         value = value,
@@ -163,10 +292,10 @@ fun EmailTextField(
         placeholder = placeholder,
         singleLine = singleLine,
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
-            focusedIndicatorColor = Color.LightGray,
-            unfocusedIndicatorColor = Color.LightGray,
+            focusedContainerColor = MaterialTheme.colorScheme.background,
+            unfocusedContainerColor = MaterialTheme.colorScheme.background,
+            focusedIndicatorColor = indicatorColor,
+            unfocusedIndicatorColor = indicatorColor,
         ),
         keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
         keyboardOptions = KeyboardOptions.Default.copy(
@@ -183,30 +312,81 @@ fun EmailTextField(
 }
 
 /**
- * A custom send Button that shows both text and an icon.
+ * A composable that displays a list of attachments.
  */
 @Composable
-fun SendButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true
+fun Attachments(
+    attachments: List<Uri>,
+    onCloseClicked: (index: Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Button(
-        onClick = onClick, modifier = modifier, enabled = enabled
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+
     ) {
-        Row(
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = "Send")
-            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
-            Icon(
-                imageVector = Icons.AutoMirrored.Default.Send,
-                contentDescription = "Send Email",
-                modifier = Modifier.align(Alignment.CenterVertically)
+        attachments.forEachIndexed { index, uri ->
+            AttachmentItem(
+                uri = uri,
+                onCloseClicked = { onCloseClicked(index) }
             )
         }
     }
+}
+
+/**
+ * A composable that displays a single attachment.
+ */
+@Composable
+fun AttachmentItem(uri: Uri, onCloseClicked: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .clip(RoundedCornerShape(4.dp))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Default.InsertDriveFile,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.surfaceTint,
+            modifier = Modifier.size(32.dp)
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = getDisplayNameFromUri(LocalContext.current, uri) ?: "Unknown",
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+        )
+
+        IconButton(
+            onClick = onCloseClicked
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Send Email",
+            )
+        }
+    }
+}
+
+/**
+ * Helper to get the a human readable display name for a given [uri].
+ */
+fun getDisplayNameFromUri(context: Context, uri: Uri): String? {
+    var displayName: String? = null
+    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        if (cursor.moveToFirst()) {
+            displayName = cursor.getString(nameIndex)
+        }
+    }
+    return displayName
 }
 
 /**
@@ -226,9 +406,15 @@ internal fun isValidEmail(addresses: String): Boolean {
 /**
  * Helper to send an email using the Gmail app.
  */
-fun sendEmail(context: Context, to: String, subject: String, message: String) {
+fun sendEmail(
+    context: Context,
+    to: String,
+    subject: String,
+    message: String,
+    attachments: List<Uri>
+) {
     // Create an Intent object to perform a send action.
-    val intent = Intent(Intent.ACTION_SEND).apply {
+    val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
         // Directly name the standard Gmail package as the
         // target of this request so that an app chooser is
         // not required.
@@ -246,29 +432,26 @@ fun sendEmail(context: Context, to: String, subject: String, message: String) {
                 .map { it.trim() }
                 .toTypedArray()
         )
-        putExtra(Intent.EXTRA_SUBJECT, subject)
-        putExtra(Intent.EXTRA_TEXT, message)
+
+        if (subject.isNotEmpty()) {
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+        }
+
+        if (message.isNotEmpty()) {
+            putExtra(Intent.EXTRA_TEXT, message)
+        }
+
+        if (attachments.isNotEmpty()) {
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(attachments))
+        }
     }
 
-    // Ensure that the declared gmail package can be
-    // resolved (found on the device) and if found,
-    // then start send the intent to start the Compose
-    // activity that will populate its fields with the
-    // with the Intent extras.
-    if (intent.resolveActivity(context.packageManager) != null) {
-        context.startActivity(intent)
-    } else {
-        Toast.makeText(
-            context,
-            "GMail client not found.",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
+    context.startActivity(Intent.createChooser(intent, "Send with..."))
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, uiMode = UI_MODE_NIGHT_NO)
 @Composable
-fun NewMessagePreview() {
+fun EmailScreenPreview() {
     AppTheme {
         EmailScreen()
     }
